@@ -1,0 +1,106 @@
+[build]
+  publish = "./" 
+  functions = "netlify/functions"
+
+# CORS headers for all static files and pages
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Core CORS headers
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS, HEAD"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Referer, User-Agent"
+    Access-Control-Expose-Headers = "Content-Length, Content-Type"
+    Access-Control-Allow-Credentials = "false"
+    Access-Control-Max-Age = "86400"
+    
+    # Iframe embedding headers
+    X-Frame-Options = "SAMEORIGIN"
+    Content-Security-Policy = "frame-ancestors 'self' *.jotform.com *.jotform.co *.jotform.eu *.jotforms.com https://embed.jotform.io"
+    
+    # Permissions Policy to allow media features for JotForm content
+    Permissions-Policy = "autoplay=(self \"https://form.jotform.com\" \"https://js.jotform.com\" \"https://widgets-cache.jotform.io\"), encrypted-media=(self \"https://form.jotform.com\" \"https://js.jotform.com\" \"https://widgets-cache.jotform.io\"), camera=(self \"https://form.jotform.com\"), microphone=(self \"https://form.jotform.com\")"
+    
+    # Security headers that allow widget functionality
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Content-Type-Options = "nosniff"
+    
+    # Cache control for widget files
+    Cache-Control = "public, max-age=3600"
+
+# Enhanced CORS headers for API functions
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    # Comprehensive CORS for API endpoints
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Referer, User-Agent, X-Custom-Header"
+    Access-Control-Expose-Headers = "Content-Length, Content-Type, X-Custom-Header"
+    Access-Control-Allow-Credentials = "false"
+    Access-Control-Max-Age = "86400"
+    
+    # API-specific headers
+    Content-Type = "application/json"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Specific headers for main widget file
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    # Widget-specific CORS
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Accept, Origin, Referer"
+    
+    # Enhanced iframe embedding for JotForm domains
+    X-Frame-Options = "ALLOWALL"
+    Content-Security-Policy = "frame-ancestors *; default-src 'self' 'unsafe-inline' 'unsafe-eval' *.jotform.com *.jotform.co *.jotform.eu *.jotforms.com *.trustedform.com api.trustedform.com https: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.jotform.com *.trustedform.com api.trustedform.com; style-src 'self' 'unsafe-inline' *.jotform.com; img-src 'self' data: *.trustedform.com api.trustedform.com *.jotform.com; connect-src 'self' *.trustedform.com api.trustedform.com *.jotform.com *.netlify.app"
+    
+    # Permissions Policy for widget to allow all necessary features
+    Permissions-Policy = "autoplay=*, encrypted-media=*, camera=*, microphone=*, fullscreen=*, payment=*"
+    
+    # Widget-specific caching
+    Cache-Control = "public, max-age=300"
+
+# Headers for proxy API specifically
+[[headers]]
+  for = "/api/proxy"
+  [headers.values]
+    # Proxy-specific CORS (more permissive for cross-origin proxy requests)
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Referer, User-Agent"
+    Access-Control-Expose-Headers = "Content-Type, Content-Length"
+    Access-Control-Allow-Credentials = "false"
+    Access-Control-Max-Age = "3600"
+
+# JotForm proxy redirects
+[[redirects]]
+  force = true
+  from = "/jotform-script/*"
+  status = 200
+  to = "https://js.jotform.com/:splat"
+
+# API function routing
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Netlify functions configuration
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["canvas", "xhr-sync-worker"]
+
+# Build configuration for JSDOM dependencies
+[build.environment]
+  NODE_OPTIONS = "--max-old-space-size=4096"
+
+# Handle OPTIONS preflight requests
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  conditions = {method = ["OPTIONS"]}
+  headers = {Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS", Access-Control-Allow-Headers = "Content-Type, Authorization"}
