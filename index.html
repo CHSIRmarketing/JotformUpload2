@@ -21,11 +21,9 @@
         };
       }
 
-      const address = localStorage.getItem("addressNumber");
-      const unitNumber = localStorage.getItem("unitNumber");
       // Store the latest values
-      let latestAddress = address || "";
-      let latestUnitNumber = unitNumber || "";
+      let latestAddress = "";
+      let latestUnitNumber = "";
 
       function sendFullAddress() {
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
@@ -42,13 +40,19 @@
 
       JFCustomWidget.subscribe("ready", function () {
         console.log("address => start ..");
-          console.log(address, unitNumber, "address => start ..")
+          JFCustomWidget.getFieldsValue(function(values) {
+              console.log("All field values:", values);
+              console.log("Address Line 1:", values["input_10_addr_line1"]);
+              console.log("Address Line 2:", values["input_10_addr_line2"]);
+              latestAddress = values["input_10_addr_line1"]
+              latestUnitNumber = values["input_10_addr_line2"]
+          });
+
         JFCustomWidget.listenFromField(
           "input_10_addr_line1",
           "keyup",
           function (value) {
             console.log("ADDRESS1 key up:", value);
-              console.log(address, unitNumber, "address => start ..")
             localStorage.setItem("addressNumber", value);
             latestAddress = value;
             debouncedSendFullAddress();
