@@ -28,10 +28,10 @@
       // Get current values from the fields
       function getCurrentValues() {
           const address = JFCustomWidget.getWidgetSetting('input_10_addr_line1') ||
-              document.querySelector('[name="input_10_addr_line1"]')?.value || '';
+              document.querySelector('[id="input_10_addr_line1"]')?.value || '';
           const unit = JFCustomWidget.getWidgetSetting('input_10_addr_line2') ||
-              document.querySelector('[name="input_10_addr_line2"]')?.value || '';
-
+              document.querySelector('[id="input_10_addr_line2"]')?.value || '';
+          console.log(document.querySelector('[id="input_10_addr_line1"]')?.value, document.querySelector('[id="input_10_addr_line1"]')?.value)
           latestAddress = address || "";
           latestUnitNumber = unit || "";
           return { address, unit };
