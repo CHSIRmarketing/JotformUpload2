@@ -21,9 +21,11 @@
         };
       }
 
+      const address = localStorage.getItem("addressNumber");
+      const unitNumber = localStorage.getItem("unitNumber");
       // Store the latest values
-      let latestAddress = "";
-      let latestUnitNumber = "";
+      let latestAddress = address || "";
+      let latestUnitNumber = unitNumber || "";
 
       function sendFullAddress() {
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
