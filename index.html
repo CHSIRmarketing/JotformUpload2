@@ -26,9 +26,16 @@
       let latestUnitNumber = localStorage.getItem("unitNumber") || "";
 
       function sendFullAddress() {
-        latestAddress = document.getElementById('input_10_addr_line1').value;
-        latestUnitNumber = document.getElementById('input_10_addr_line2').value;
-          console.log(latestAddress, latestUnitNumber, "address => submit")
+          JFCustomWidget.getFieldsValue(function(values) {
+              console.log("All field values:", values);
+
+              // Access a specific field by its name
+              let address1 = values["input_10_addr_line1"];
+              let address2 = values["input_10_addr_line2"];
+
+              console.log("Address Line 1:", address1);
+              console.log("Address Line 2:", address2);
+          });
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -42,7 +49,7 @@
       const debouncedSendFullAddress = debounce(sendFullAddress, 500);
 
       JFCustomWidget.subscribe("ready", function () {
-        console.log("address => start .. v2");
+        console.log("address => start .. v3");
 
         JFCustomWidget.listenFromField(
           "input_10_addr_line1",
