@@ -25,6 +25,17 @@
       let latestAddress = "";
       let latestUnitNumber = "";
 
+      // Get current values from the fields
+      function getCurrentValues() {
+          const address = JFCustomWidget.getWidgetSetting('input_10_addr_line1') ||
+              document.querySelector('[name="q10_propertyAddress[addr_line1]"]')?.value || '';
+          const unit = JFCustomWidget.getWidgetSetting('input_10_addr_line2') ||
+              document.querySelector('[name="q10_propertyAddress[addr_line2]"]')?.value || '';
+          latestAddress = address || "";
+          latestUnitNumber = unit || "";
+          return { address, unit };
+      }
+
       function sendFullAddress() {
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
           method: 'POST',
@@ -40,14 +51,7 @@
 
       JFCustomWidget.subscribe("ready", function () {
         console.log("address => start ..");
-          JFCustomWidget.getFieldsValue(function(values) {
-              console.log("All field values:", values);
-              console.log("Address Line 1:", values["input_10_addr_line1"]);
-              console.log("Address Line 2:", values["input_10_addr_line2"]);
-              latestAddress = values["input_10_addr_line1"]
-              latestUnitNumber = values["input_10_addr_line2"]
-          });
-
+        getCurrentValues()
         JFCustomWidget.listenFromField(
           "input_10_addr_line1",
           "keyup",
