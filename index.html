@@ -25,10 +25,12 @@
     let latestAddress = localStorage.getItem("addressNumber") || "";
     let latestUnitNumber = localStorage.getItem("unitNumber") || "";
     let isAddressChanged = false;
+    let isCityChanged = false;
+    let isPostalChanged = false;
     let isUnitChanged = false;
 
     function sendFullAddress() {
-        const submitData = { address: latestAddress, unitNumber: isUnitChanged ? latestUnitNumber : isAddressChanged ? '' : latestUnitNumber }
+        const submitData = { address: latestAddress, unitNumber: isUnitChanged ? latestUnitNumber : isAddressChanged && isCityChanged && isPostalChanged ? '' : latestUnitNumber }
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -63,6 +65,25 @@
                 console.log("addr2 key up:", value);
                 localStorage.setItem("unitNumber", value);
                 latestUnitNumber = value;
+                debouncedSendFullAddress();
+            }
+        );
+
+        JFCustomWidget.listenFromField(
+            "input_10_city",
+            "keyup",
+            function (value) {
+                isCityChanged = true
+                localStorage.setItem("city", value);
+                debouncedSendFullAddress();
+            }
+        );
+        JFCustomWidget.listenFromField(
+            "input_10_postal",
+            "keyup",
+            function (value) {
+                isPostalChanged = true
+                localStorage.setItem("postal", value);
                 debouncedSendFullAddress();
             }
         );
