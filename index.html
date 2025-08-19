@@ -1,138 +1,303 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <script
-            src="https://js.jotform.com/JotFormCustomWidget.min.js"
-            crossorigin="anonymous"
+      src="https://js.jotform.com/JotFormCustomWidget.min.js"
+      crossorigin="anonymous"
     ></script>
-</head>
-<body>
-<script type="text/javascript">
-    // Debounce function to limit API calls
-    function debounce(func, wait) {
+  </head>
+  <body>
+    <script type="text/javascript">
+      // Debounce function to limit API calls
+      function debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
+          const later = () => {
             clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
         };
-    }
+      }
 
-    // Store the latest values - initialize as empty strings
-    let latestAddress = "";
-    let latestUnitNumber = "";
-    let isAddressChanged = false;
-    let isUnitChanged = false;
-    let isInitialized = false;
+      // Store the latest values
+      let latestAddress = "";
+      let latestUnitNumber = "";
+      let initialAddress = "";
+      let initialUnitNumber = "";
+      let isAddressChanged = false;
+      let isUnitChanged = false;
+      let isInitialized = false;
+      let initializationComplete = false;
+      let isFormReset = false; // Track if form was reset (new tab) vs persisted (refresh)
 
-    function sendFullAddress() {
-        // Only send data if there have been actual changes after initialization
-        if (!isInitialized) {
-            console.log('Not initialized yet, skipping send');
-            return;
+      function sendFullAddress() {
+        if (!isInitialized || !initializationComplete) {
+          console.log("Not fully initialized yet, skipping send");
+          return;
         }
 
-        const submitData = {};
-
-        // Send address if it has changed (even if empty)
-        if (isAddressChanged) {
-            submitData.address = latestAddress;
+        // Don't send anything if no changes occurred
+        if (!isAddressChanged && !isUnitChanged) {
+          console.log("No changes to send");
+          return;
         }
 
-        // Send unit number if it has changed (even if empty)
-        if (isUnitChanged) {
-            submitData.unitNumber = latestUnitNumber;
+        // Always send both fields to ensure proper state sync
+        const submitData = {
+          address: latestAddress,
+          unitNumber: latestUnitNumber,
+        };
+
+        console.log("Sending complete data:", submitData);
+
+        fetch(
+          "https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(submitData),
+          }
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            console.log("Address+Unit sent:", data);
+            // Save to localStorage after successful send
+            localStorage.setItem("jotform_address", latestAddress);
+            localStorage.setItem("jotform_unitNumber", latestUnitNumber);
+
+            // Reset change flags after successful send
+            isAddressChanged = false;
+            isUnitChanged = false;
+
+            // Update initial values to current values after successful save
+            initialAddress = latestAddress;
+            initialUnitNumber = latestUnitNumber;
+          })
+          .catch((err) => console.error("Error sending address+unit:", err));
+      }
+
+      const debouncedSendFullAddress = debounce(sendFullAddress, 500);
+
+      // Function to detect if form was reset or persisted
+      function detectFormState() {
+        // Get values from localStorage
+        const storedAddress = localStorage.getItem("jotform_address") || "";
+        const storedUnitNumber =
+          localStorage.getItem("jotform_unitNumber") || "";
+
+        console.log("Stored values:", { storedAddress, storedUnitNumber });
+        console.log("Current form values:", {
+          latestAddress,
+          latestUnitNumber,
+        });
+
+        // If form has values and they match stored values, it's a refresh (form persisted)
+        // If form is empty but localStorage has values, it's a reset (new tab)
+        const hasFormValues = latestAddress !== "" || latestUnitNumber !== "";
+        const hasStoredValues = storedAddress !== "" || storedUnitNumber !== "";
+
+        if (!hasFormValues && hasStoredValues) {
+          // Form was reset (new tab) - form is empty but localStorage has data
+          isFormReset = true;
+          console.log("Form state: RESET (new tab)");
+          // Don't restore from localStorage - treat empty fields as intentional clearing
+          initialAddress = "";
+          initialUnitNumber = "";
+        } else if (hasFormValues) {
+          // Form was persisted (refresh) - form has values
+          isFormReset = false;
+          console.log("Form state: PERSISTED (refresh)");
+          // Restore our JS variables from localStorage to maintain proper state
+          if (hasStoredValues) {
+            initialAddress = storedAddress;
+            initialUnitNumber = storedUnitNumber;
+            console.log("Restored initial state from localStorage:", {
+              initialAddress,
+              initialUnitNumber,
+            });
+          } else {
+            // First time filling the form
+            initialAddress = latestAddress;
+            initialUnitNumber = latestUnitNumber;
+          }
+        } else {
+          // Both form and localStorage are empty - first time user
+          isFormReset = false;
+          console.log("Form state: FIRST TIME");
+          initialAddress = "";
+          initialUnitNumber = "";
         }
+      }
 
-        // Only send if there's actually data to send
-        if (Object.keys(submitData).length === 0) {
-            console.log('No changes to send');
-            return;
-        }
+      // Function to capture initial state after all auto-fill is complete
+      function captureInitialState() {
+        console.log("Capturing initial state...");
+        console.log("Current values before capture:", {
+          latestAddress,
+          latestUnitNumber,
+        });
 
-        console.log('Sending data:', submitData);
+        // Detect if form was reset or persisted
+        detectFormState();
 
-        fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(submitData)
-        })
-            .then(res => res.json())
-            .then(data => console.log('Address+Unit sent:', data))
-            .catch(err => console.error('Error sending address+unit:', err));
-    }
+        // Reset change flags
+        isAddressChanged = false;
+        isUnitChanged = false;
 
-    const debouncedSendFullAddress = debounce(sendFullAddress, 500);
+        // Mark initialization as complete
+        initializationComplete = true;
 
-    JFCustomWidget.subscribe("ready", function (value) {
-        console.log("address => start .. v3");
+        console.log("Final initial state:", {
+          initialAddress,
+          initialUnitNumber,
+          isFormReset,
+        });
+      }
+
+      JFCustomWidget.subscribe("ready", function (value) {
+        console.log("address => start .. v7");
         console.log(value);
 
-        // Clear any existing localStorage on initialization to start fresh
-        localStorage.removeItem("addressNumber");
-        localStorage.removeItem("unitNumber");
+        JFCustomWidget.listenFromField(
+          "input_10_addr_line1",
+          "keyup",
+          function (value) {
+            const cleanValue = value || "";
 
-        // Mark as initialized after a short delay to avoid sending data on page load
+            if (!isInitialized) {
+              // During initialization, just track values
+              latestAddress = cleanValue;
+              console.log("ADDRESS1 init keyup:", cleanValue);
+            } else if (initializationComplete) {
+              // After initialization, check for actual changes against initial state
+              if (initialAddress !== cleanValue) {
+                isAddressChanged = true;
+                console.log(
+                  "ADDRESS1 CHANGED from initial:",
+                  initialAddress,
+                  "to:",
+                  cleanValue
+                );
+                latestAddress = cleanValue;
+                debouncedSendFullAddress();
+              } else {
+                latestAddress = cleanValue;
+                isAddressChanged = false;
+              }
+            } else {
+              // During the gap between isInitialized and initializationComplete
+              latestAddress = cleanValue;
+            }
+          }
+        );
+
+        JFCustomWidget.listenFromField(
+          "input_10_addr_line2",
+          "keyup",
+          function (value) {
+            const cleanValue = value || "";
+
+            if (!isInitialized) {
+              // During initialization, just track values
+              latestUnitNumber = cleanValue;
+              console.log("UNIT init keyup:", cleanValue);
+            } else if (initializationComplete) {
+              // After initialization, check for actual changes against initial state
+              if (initialUnitNumber !== cleanValue) {
+                isUnitChanged = true;
+                console.log(
+                  "UNIT CHANGED from initial:",
+                  initialUnitNumber,
+                  "to:",
+                  cleanValue
+                );
+                latestUnitNumber = cleanValue;
+                debouncedSendFullAddress();
+              } else {
+                latestUnitNumber = cleanValue;
+                isUnitChanged = false;
+              }
+            } else {
+              // During the gap between isInitialized and initializationComplete
+              latestUnitNumber = cleanValue;
+            }
+          }
+        );
+
+        // Also listen to 'change' events to catch auto-fill and other scenarios
+        JFCustomWidget.listenFromField(
+          "input_10_addr_line1",
+          "change",
+          function (value) {
+            const cleanValue = value || "";
+            if (!isInitialized) {
+              latestAddress = cleanValue;
+              console.log("ADDRESS1 init change:", cleanValue);
+            } else if (
+              initializationComplete &&
+              initialAddress !== cleanValue
+            ) {
+              isAddressChanged = true;
+              console.log(
+                "ADDRESS1 CHANGED (change event) from initial:",
+                initialAddress,
+                "to:",
+                cleanValue
+              );
+              latestAddress = cleanValue;
+              debouncedSendFullAddress();
+            } else {
+              latestAddress = cleanValue;
+              if (initializationComplete) {
+                isAddressChanged = false;
+              }
+            }
+          }
+        );
+
+        JFCustomWidget.listenFromField(
+          "input_10_addr_line2",
+          "change",
+          function (value) {
+            const cleanValue = value || "";
+            if (!isInitialized) {
+              latestUnitNumber = cleanValue;
+              console.log("UNIT init change:", cleanValue);
+            } else if (
+              initializationComplete &&
+              initialUnitNumber !== cleanValue
+            ) {
+              isUnitChanged = true;
+              console.log(
+                "UNIT CHANGED (change event) from initial:",
+                initialUnitNumber,
+                "to:",
+                cleanValue
+              );
+              latestUnitNumber = cleanValue;
+              debouncedSendFullAddress();
+            } else {
+              latestUnitNumber = cleanValue;
+              if (initializationComplete) {
+                isUnitChanged = false;
+              }
+            }
+          }
+        );
+
+        // Multi-phase initialization to handle all scenarios
         setTimeout(() => {
-            isInitialized = true;
-            console.log('Widget initialized, ready to track changes');
-        }, 1000);
+          isInitialized = true;
+          console.log("Phase 1: Basic initialization complete");
 
-        JFCustomWidget.listenFromField(
-            "input_10_addr_line1",
-            "keyup",
-            function (value) {
-                const cleanValue = value || "";
-
-                // Only process if initialized and value actually changed
-                if (isInitialized && latestAddress !== cleanValue) {
-                    isAddressChanged = true;
-                    console.log("ADDRESS1 key up:", cleanValue);
-
-                    if (cleanValue === "") {
-                        localStorage.removeItem("addressNumber");
-                    } else {
-                        localStorage.setItem("addressNumber", cleanValue);
-                    }
-
-                    latestAddress = cleanValue;
-                    debouncedSendFullAddress();
-                } else if (!isInitialized) {
-                    // Just update the tracking variable during initialization
-                    latestAddress = cleanValue;
-                }
-            }
-        );
-
-        JFCustomWidget.listenFromField(
-            "input_10_addr_line2",
-            "keyup",
-            function (value) {
-                const cleanValue = value || "";
-
-                // Only process if initialized and value actually changed
-                if (isInitialized && latestUnitNumber !== cleanValue) {
-                    isUnitChanged = true;
-                    console.log("addr2 key up:", cleanValue);
-
-                    if (cleanValue === "") {
-                        localStorage.removeItem("unitNumber");
-                    } else {
-                        localStorage.setItem("unitNumber", cleanValue);
-                    }
-
-                    latestUnitNumber = cleanValue;
-                    debouncedSendFullAddress();
-                } else if (!isInitialized) {
-                    // Just update the tracking variable during initialization
-                    latestUnitNumber = cleanValue;
-                }
-            }
-        );
-    });
-</script>
-</body>
+          // Give more time for auto-fill, browser restore, etc.
+          setTimeout(() => {
+            captureInitialState();
+          }, 1500); // Additional delay for capturing final state
+        }, 500); // Quick initial delay
+      });
+    </script>
+  </body>
 </html>
