@@ -24,12 +24,15 @@
       // Store the latest values
       let latestAddress = localStorage.getItem("addressNumber") || "";
       let latestUnitNumber = localStorage.getItem("unitNumber") || "";
+      let isAddressChanged = false;
+      let isUnitChanged = false;
 
       function sendFullAddress() {
+          const submitData = { address: isAddressChanged ? latestAddress : undefined, unitNumber: isUnitChanged ? latestUnitNumber : undefined }
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: latestAddress, unitNumber: latestUnitNumber })
+          body: JSON.stringify(submitData)
         })
         .then(res => res.json())
         .then(data => console.log('Address+Unit sent:', data))
@@ -39,15 +42,13 @@
       const debouncedSendFullAddress = debounce(sendFullAddress, 500);
 
       JFCustomWidget.subscribe("ready", function () {
-        console.log("address => start .. v4");
-// ✅ Grab initial values in case fields are pre-filled
-          const addr1 = document.querySelector("#input_10_addr_line1")?.value || "";
-          const addr2 = document.querySelector("#input_10_addr_line2")?.value || "";
-          console.log(addr1, addr2, "addr1, addr2" );
+        console.log("address => start .. v1");
+
         JFCustomWidget.listenFromField(
           "input_10_addr_line1",
           "keyup",
           function (value) {
+            isAddressChanged = true;
             console.log("ADDRESS1 key up:", value);
             localStorage.setItem("addressNumber", value);
             latestAddress = value;
@@ -58,6 +59,7 @@
           "input_10_addr_line2",
           "keyup",
           function (value) {
+            isUnitChanged = true;
             console.log("addr2 key up:", value);
             localStorage.setItem("unitNumber", value);
             latestUnitNumber = value;
