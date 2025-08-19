@@ -48,6 +48,7 @@
           "keyup",
           function (value) {
             console.log("ADDRESS1 key up:", value);
+              console.log(address, unitNumber, "address => start ..")
             localStorage.setItem("addressNumber", value);
             latestAddress = value;
             debouncedSendFullAddress();
