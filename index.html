@@ -26,6 +26,9 @@
       let latestUnitNumber = localStorage.getItem("unitNumber") || "";
 
       function sendFullAddress() {
+        latestAddress = document.getElementById('input_10_addr_line1').value;
+        latestUnitNumber = document.getElementById('input_10_addr_line2').value;
+          console.log(latestAddress, latestUnitNumber, "address => submit")
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,7 +42,7 @@
       const debouncedSendFullAddress = debounce(sendFullAddress, 500);
 
       JFCustomWidget.subscribe("ready", function () {
-        console.log("address => start .. v1");
+        console.log("address => start .. v2");
 
         JFCustomWidget.listenFromField(
           "input_10_addr_line1",
