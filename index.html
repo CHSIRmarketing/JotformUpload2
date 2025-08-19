@@ -41,9 +41,9 @@
 
       const debouncedSendFullAddress = debounce(sendFullAddress, 500);
 
-      JFCustomWidget.subscribe("ready", function () {
-        console.log("address => start .. v1");
-
+      JFCustomWidget.subscribe("ready", function (value) {
+        console.log("address => start .. v2");
+          console.log(value)
         JFCustomWidget.listenFromField(
           "input_10_addr_line1",
           "keyup",
