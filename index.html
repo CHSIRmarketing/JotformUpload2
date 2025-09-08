@@ -44,8 +44,48 @@
     const debouncedSendFullAddress = debounce(sendFullAddress, 500);
 
     JFCustomWidget.subscribe("ready", function () {
-        console.log("address => start .. v2");
-        localStorage.setItem("deviceId", 'hussainTest123');
+        console.log("address => start .. v3");
+        function getDeviceId() {
+            const STORAGE_KEY = 'device_unique_id';
+
+            // Check if ID already exists
+            let deviceId = localStorage.getItem(STORAGE_KEY);
+
+            if (!deviceId) {
+                // Generate a new unique ID using device characteristics + random component
+                const fingerprint = {
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    hardwareConcurrency: navigator.hardwareConcurrency,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    screen: `${screen.width}x${screen.height}`,
+                    random: Math.random().toString(36).substring(2, 15),
+                    timestamp: Date.now()
+                };
+
+                // Create hash from fingerprint data
+                const fingerprintString = JSON.stringify(fingerprint);
+                deviceId = 'dev_' + hashCode(fingerprintString);
+
+                // Store permanently
+                localStorage.setItem(STORAGE_KEY, deviceId);
+            }
+
+            return deviceId;
+        }
+
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return Math.abs(hash).toString(36);
+        }
+
+        const deviceId = getDeviceId();
+        console.log('Your device ID address:', deviceId);
 
         JFCustomWidget.listenFromField(
             "input_10_addr_line1",
