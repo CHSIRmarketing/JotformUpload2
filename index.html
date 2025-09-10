@@ -30,21 +30,6 @@
     let isUnitChanged = false;
 
     function sendFullAddress() {
-        const submitData = { address: latestAddress, unitNumber: isUnitChanged ? latestUnitNumber : isAddressChanged && isCityChanged && isPostalChanged ? '' : latestUnitNumber }
-        fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submitData)
-        })
-            .then(res => res.json())
-            .then(data => console.log('Address+Unit sent:', data))
-            .catch(err => console.error('Error sending address+unit:', err));
-    }
-
-    const debouncedSendFullAddress = debounce(sendFullAddress, 500);
-
-    JFCustomWidget.subscribe("ready", function () {
-        console.log("address => start .. v3");
         function getDeviceId() {
             const STORAGE_KEY = 'device_unique_id';
 
@@ -70,7 +55,21 @@
         }
 
         const deviceId = getDeviceId();
-        console.log('Your device ID address:', deviceId);
+        const submitData = { address: latestAddress, unitNumber: isUnitChanged ? latestUnitNumber : isAddressChanged && isCityChanged && isPostalChanged ? '' : latestUnitNumber, deviceId: deviceId }
+        fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitData)
+        })
+            .then(res => res.json())
+            .then(data => console.log('Address+Unit sent:', data))
+            .catch(err => console.error('Error sending address+unit:', err));
+    }
+
+    const debouncedSendFullAddress = debounce(sendFullAddress, 500);
+
+    JFCustomWidget.subscribe("ready", function () {
+        console.log("address => start .. v1");
 
         JFCustomWidget.listenFromField(
             "input_10_addr_line1",
