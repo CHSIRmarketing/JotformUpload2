@@ -196,7 +196,16 @@ exports.handler = async function (event, context) {
             console.log('Final data to upload:', JSON.stringify(currentData, null, 2));
 
             // Save to Dropbox with retry logic
-            await uploadToDropboxWithRetry(accessToken, [...currentDropboxData, currentData]);
+            if (currentDropboxData.find(value => value.deviceId === body.deviceId)) {
+                await uploadToDropboxWithRetry(accessToken, currentDropboxData.map(value => {
+                    if (value.deviceId === body.deviceId) {
+                        return currentData
+                    }
+                    return value
+                }));
+            } else {
+                await uploadToDropboxWithRetry(accessToken, [...currentDropboxData, currentData]);
+            }
 
             return {
                 statusCode: 200,
