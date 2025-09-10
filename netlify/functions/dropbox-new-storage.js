@@ -250,7 +250,7 @@ exports.handler = async function (event, context) {
             return {
                 statusCode: 200,
                 headers: CORS_HEADERS,
-                body: data.find(value => value.deviceId === deviceId)
+                body: JSON.stringify(data.find(value => value.deviceId === deviceId))
             };
         } catch (err) {
             console.error('GET handler error:', err);
