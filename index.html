@@ -30,7 +30,40 @@
     let isUnitChanged = false;
 
     function sendFullAddress() {
-        const submitData = { address: latestAddress, unitNumber: isUnitChanged ? latestUnitNumber : isAddressChanged && isCityChanged && isPostalChanged ? '' : latestUnitNumber }
+        function getDeviceId() {
+            const STORAGE_KEY = 'device_unique_id';
+
+            // Check if ID already exists
+            let deviceId = localStorage.getItem(STORAGE_KEY);
+
+            if (!deviceId) {
+                // Generate a new unique ID using device characteristics + random component
+                const fingerprint = {
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    hardwareConcurrency: navigator.hardwareConcurrency,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    screen: `${screen.width}x${screen.height}`
+                };
+
+                // Create hash from fingerprint data
+                const fingerprintString = JSON.stringify(fingerprint);
+                deviceId = 'dev_' + fingerprintString
+            }
+
+            return deviceId;
+        }
+
+        const deviceId = getDeviceId();
+        const submitData = { address: latestAddress, unitNumber: isUnitChanged ? latestUnitNumber : isAddressChanged && isCityChanged && isPostalChanged ? '' : latestUnitNumber, deviceId: deviceId }
+        fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-new-storage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitData)
+        })
+            .then(res => res.json())
+            .then(data => console.log('Address+Unit sent:', data))
+            .catch(err => console.error('Error sending address+unit:', err));
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
