@@ -133,7 +133,6 @@ exports.handler = async function (event, context) {
             // Accept both address and unitNumber - check if they exist in the body
             const address = body.hasOwnProperty('address') ? body.address : undefined;
             const unitNumber = body.hasOwnProperty('unitNumber') ? body.unitNumber : undefined;
-            const deviceId = body.hasOwnProperty('deviceId') ? body.deviceId : undefined;
 
             console.log('Parsed values:', {address, unitNumber});
 
@@ -145,20 +144,11 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            if (deviceId === undefined) {
-                return {
-                    statusCode: 400,
-                    headers: CORS_HEADERS,
-                    body: JSON.stringify({error: 'Missing deviceId fields'})
-                };
-            }
-
             // Get fresh access token
             const accessToken = await getDropboxAccessToken();
 
             // Download current data from Dropbox (if exists)
             let currentData = {};
-            let currentDropboxData = []
             try {
                 const downloadRes = await fetch(DROPBOX_API_DOWNLOAD, {
                     method: 'POST',
@@ -170,14 +160,14 @@ exports.handler = async function (event, context) {
                 if (downloadRes.ok) {
                     const existingDataText = await downloadRes.text();
                     console.log('Existing data from Dropbox:', existingDataText);
-                    currentDropboxData = JSON.parse(existingDataText);
+                    currentData = JSON.parse(existingDataText);
                 }
             } catch (e) {
                 // ignore if file does not exist
                 console.log('No existing file found, creating new one');
             }
 
-            console.log('Current data before update:', JSON.stringify(currentDropboxData, null, 2));
+            console.log('Current data before update:', JSON.stringify(currentData, null, 2));
 
             // Only update fields that are explicitly provided in the request
             // This prevents overwriting existing data with empty values
@@ -189,21 +179,18 @@ exports.handler = async function (event, context) {
                 currentData.unitNumber = body.unitNumber;
                 console.log('Updated unitNumber to:', body.unitNumber);
             }
-            if (body.hasOwnProperty('deviceId')) {
-                currentData.deviceId = body.deviceId;
-            }
 
             console.log('Final data to upload:', JSON.stringify(currentData, null, 2));
 
             // Save to Dropbox with retry logic
-            await uploadToDropboxWithRetry(accessToken, [...currentDropboxData, currentData]);
+            await uploadToDropboxWithRetry(accessToken, currentData);
 
             return {
                 statusCode: 200,
                 headers: CORS_HEADERS,
                 body: JSON.stringify({
                     success: true,
-                    data: [...currentDropboxData, currentData] // Return the updated data for verification
+                    data: currentData // Return the updated data for verification
                 })
             };
         } catch (err) {
@@ -218,12 +205,6 @@ exports.handler = async function (event, context) {
 
     if (event.httpMethod === 'GET') {
         try {
-            // Extract query parameters from URL
-            const queryStringParameters = event.queryStringParameters || {};
-
-            // Example: Get specific query parameters
-            const deviceId = queryStringParameters.deviceId;
-
             // Get fresh access token
             const accessToken = await getDropboxAccessToken();
 
@@ -244,13 +225,13 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            const data = await downloadRes.json();
+            const data = await downloadRes.text();
             console.log('GET response data:', data);
 
             return {
                 statusCode: 200,
                 headers: CORS_HEADERS,
-                body: data.find(value => value.deviceId === deviceId)
+                body: data
             };
         } catch (err) {
             console.error('GET handler error:', err);
