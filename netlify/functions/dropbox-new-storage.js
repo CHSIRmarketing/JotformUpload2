@@ -230,8 +230,10 @@ exports.handler = async function (event, context) {
             // Extract query parameters from URL
             const queryStringParameters = event.queryStringParameters || {};
 
-            // Example: Get specific query parameters
+            // Get deviceId parameter
             const deviceId = queryStringParameters.deviceId;
+
+            console.log('GET request for deviceId:', deviceId);
 
             // Get fresh access token
             const accessToken = await getDropboxAccessToken();
@@ -256,11 +258,56 @@ exports.handler = async function (event, context) {
             const data = await downloadRes.json();
             console.log('GET response data:', data);
 
+            // Check if deviceId is "all" - return all data
+            if (deviceId === 'all') {
+                return {
+                    statusCode: 200,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({
+                        success: true,
+                        totalRecords: data.length,
+                        data: data
+                    })
+                };
+            }
+
+            // If deviceId is provided but not "all", find specific record
+            if (deviceId) {
+                const specificRecord = data.find(value => value.deviceId === deviceId);
+
+                if (!specificRecord) {
+                    return {
+                        statusCode: 404,
+                        headers: CORS_HEADERS,
+                        body: JSON.stringify({
+                            error: `No record found with deviceId: ${deviceId}`,
+                            availableDeviceIds: data.map(record => record.deviceId),
+                            totalRecords: data.length
+                        })
+                    };
+                }
+
+                return {
+                    statusCode: 200,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({
+                        success: true,
+                        data: specificRecord
+                    })
+                };
+            }
+
+            // If no deviceId provided, return error (you can change this behavior if needed)
             return {
-                statusCode: 200,
+                statusCode: 400,
                 headers: CORS_HEADERS,
-                body: JSON.stringify(data.find(value => value.deviceId === deviceId))
+                body: JSON.stringify({
+                    error: 'Missing deviceId parameter. Use deviceId=all to get all records or provide specific deviceId',
+                    totalRecords: data.length,
+                    availableDeviceIds: data.map(record => record.deviceId)
+                })
             };
+
         } catch (err) {
             console.error('GET handler error:', err);
             return {
