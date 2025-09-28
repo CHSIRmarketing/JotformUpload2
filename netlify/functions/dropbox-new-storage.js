@@ -13,7 +13,7 @@ const DROPBOX_PATH = '/Listings/address-new.json';
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'  // Added DELETE here
 };
 
 // Simple rate limiter - track last upload time
@@ -263,6 +263,109 @@ exports.handler = async function (event, context) {
             };
         } catch (err) {
             console.error('GET handler error:', err);
+            return {
+                statusCode: 500,
+                headers: CORS_HEADERS,
+                body: JSON.stringify({error: err.message})
+            };
+        }
+    }
+
+    if (event.httpMethod === 'DELETE') {
+        try {
+            // Extract deviceId from query parameters or body
+            let deviceId;
+
+            if (event.queryStringParameters && event.queryStringParameters.deviceId) {
+                deviceId = event.queryStringParameters.deviceId;
+            } else if (event.body) {
+                const body = JSON.parse(event.body);
+                deviceId = body.deviceId;
+            }
+
+            console.log('DELETE request for deviceId:', deviceId);
+
+            if (!deviceId) {
+                return {
+                    statusCode: 400,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({error: 'Missing deviceId parameter'})
+                };
+            }
+
+            // Get fresh access token
+            const accessToken = await getDropboxAccessToken();
+
+            // Download current data from Dropbox
+            let currentDropboxData = [];
+            try {
+                const downloadRes = await fetch(DROPBOX_API_DOWNLOAD, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Dropbox-API-Arg': JSON.stringify({path: DROPBOX_PATH})
+                    }
+                });
+
+                if (downloadRes.ok) {
+                    const existingDataText = await downloadRes.text();
+                    console.log('Existing data from Dropbox:', existingDataText);
+                    currentDropboxData = JSON.parse(existingDataText);
+                } else {
+                    return {
+                        statusCode: 404,
+                        headers: CORS_HEADERS,
+                        body: JSON.stringify({error: 'No data found to delete from'})
+                    };
+                }
+            } catch (e) {
+                console.error('Error downloading existing data:', e);
+                return {
+                    statusCode: 500,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({error: 'Failed to read existing data'})
+                };
+            }
+
+            console.log('Current data before deletion:', JSON.stringify(currentDropboxData, null, 2));
+
+            // Find the record to delete
+            const recordToDelete = currentDropboxData.find(record => record.deviceId === deviceId);
+
+            if (!recordToDelete) {
+                return {
+                    statusCode: 404,
+                    headers: CORS_HEADERS,
+                    body: JSON.stringify({
+                        error: `No record found with deviceId: ${deviceId}`,
+                        availableDeviceIds: currentDropboxData.map(record => record.deviceId)
+                    })
+                };
+            }
+
+            // Filter out the record with matching deviceId
+            const updatedData = currentDropboxData.filter(record => record.deviceId !== deviceId);
+
+            console.log('Data after deletion:', JSON.stringify(updatedData, null, 2));
+            console.log(`Deleted record:`, JSON.stringify(recordToDelete, null, 2));
+
+            // Upload updated data back to Dropbox
+            await uploadToDropboxWithRetry(accessToken, updatedData);
+
+            return {
+                statusCode: 200,
+                headers: CORS_HEADERS,
+                body: JSON.stringify({
+                    success: true,
+                    message: `Successfully deleted record for deviceId: ${deviceId}`,
+                    deletedRecord: recordToDelete,
+                    remainingRecords: updatedData.length,
+                    updatedData: updatedData
+                })
+            };
+
+        } catch (err) {
+            console.error('DELETE handler error:', err);
             return {
                 statusCode: 500,
                 headers: CORS_HEADERS,
