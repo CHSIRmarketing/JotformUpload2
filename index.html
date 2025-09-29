@@ -87,6 +87,7 @@
         }
 
         const deviceId = getBestFingerprintSync();
+        console.log(deviceId, 'deviceId v1 upload')
         const submitData = { address: latestAddress, unitNumber: isUnitChanged ? latestUnitNumber : isAddressChanged && isCityChanged && isPostalChanged ? '' : latestUnitNumber, deviceId: deviceId }
         fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-new-storage', {
             method: 'POST',
