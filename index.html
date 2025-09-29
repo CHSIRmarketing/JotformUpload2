@@ -96,7 +96,7 @@
             .then(res => res.json())
             .then(data => console.log('Address+Unit sent:', data))
             .catch(err => console.error('Error sending address+unit:', err));
-        fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-storage', {
+        fetch('https://getaddressinfofromjotform.netlify.app/.netlify/functions/dropbox-new-storage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(submitData)
