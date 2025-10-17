@@ -8,7 +8,7 @@ const DROPBOX_APP_SECRET = process.env.DROPBOX_APP_SECRET;
 
 const DROPBOX_API_UPLOAD = 'https://content.dropboxapi.com/2/files/upload';
 const DROPBOX_API_DOWNLOAD = 'https://content.dropboxapi.com/2/files/download';
-const DROPBOX_PATH = '/Listings/address-new.json';
+const DROPBOX_PATH = '/CHSIR Marketing/Listings/Listings 2025/address-new.json';
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
